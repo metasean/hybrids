@@ -237,6 +237,47 @@ describe('cache:', () => {
       });
     });
 
+    it('- runs callback when only one unobserve is called', (done) => {
+      const anotherSpy = jasmine.createSpy('another spy');
+      observe(contextObj, 'context', spy);
+      const unobserve = observe(contextObj, 'context', anotherSpy);
+
+      expect(get(contextObj, 'context', getContext)).toBe('value');
+
+      requestAnimationFrame(() => {
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(anotherSpy).toHaveBeenCalledTimes(1);
+        unobserve();
+        set(obj, 'obj', (t, v) => v, 'better value');
+        requestAnimationFrame(() => {
+          expect(spy).toHaveBeenCalledTimes(2);
+          expect(anotherSpy).toHaveBeenCalledTimes(1);
+          done();
+        });
+      });
+    });
+
+    it('- does not run callback when all unobserve functions are called', (done) => {
+      const anotherSpy = jasmine.createSpy('another spy');
+      const unobserveOne = observe(contextObj, 'context', spy);
+      const unobserveTwo = observe(contextObj, 'context', anotherSpy);
+
+      expect(get(contextObj, 'context', getContext)).toBe('value');
+
+      requestAnimationFrame(() => {
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(anotherSpy).toHaveBeenCalledTimes(1);
+        unobserveOne();
+        unobserveTwo();
+        set(obj, 'obj', (t, v) => v, 'better value');
+        requestAnimationFrame(() => {
+          expect(spy).toHaveBeenCalledTimes(1);
+          expect(anotherSpy).toHaveBeenCalledTimes(1);
+          done();
+        });
+      });
+    });
+
     it('- skips contexts from deps when context changes dependencies', (done) => {
       expect(get(contextObj, 'context', getContext)).toBe('value');
       set(contextObj, 'context', (t, v) => v, 'another value');

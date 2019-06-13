@@ -1,7 +1,7 @@
 import { stringifyElement } from './utils';
 import * as emitter from './emitter';
 
-const entries = new WeakMap();
+export const entries = new WeakMap();
 export function getEntry(target, key) {
   let targetMap = entries.get(target);
   if (!targetMap) {
@@ -100,8 +100,8 @@ export function get(target, key, getter) {
   return entry.value;
 }
 
-export function set(target, key, setter, value) {
-  if (context) {
+export function set(target, key, setter, value, force) {
+  if (context && !force) {
     context = null;
     throw Error(`Try to set '${key}' of '${stringifyElement(target)}' in get call`);
   }
@@ -136,5 +136,16 @@ export function invalidate(target, key, clearValue) {
 export function observe(target, key, fn) {
   const entry = getEntry(target, key);
   entry.observed = true;
-  return emitter.subscribe(entry, fn);
+  const unsubscribe = emitter.subscribe(entry, fn);
+
+  return function unobserve() {
+    if (unsubscribe()) {
+      entry.observed = false;
+      if (entry.deps && entry.deps.size) {
+        entry.deps.forEach((depEntry) => {
+          depEntry.contexts.delete(entry);
+        });
+      }
+    }
+  };
 }

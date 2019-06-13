@@ -41,5 +41,8 @@ export function subscribe(target, cb) {
   listeners.add(cb);
   dispatch(target);
 
-  return () => listeners.delete(cb);
+  return function unsubscribe() {
+    listeners.delete(cb);
+    return !listeners.size;
+  };
 }
